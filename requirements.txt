@@ -1,0 +1,9 @@
+# Install with:  pip install -r requirements.txt
+# Versions are pinned so every teammate gets exactly the same libraries.
+
+anthropic==2.8.0   # Claude API (planner + text agents)
+pytest==9.2.0      # running the tests
+
+# Added later by the agent owners:
+# google-genai     (video agent - Dipesh)
+# elevenlabs       (audio agent - Ankit)

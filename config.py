@@ -60,8 +60,11 @@ load_env_file()
 # main.py will also set this to True when you pass --mock.
 MOCK_MODE = os.environ.get("MOCK_MODE", "0").strip().lower() in ("1", "true", "yes")
 
-# Which Claude model the planner and text agents use. Change it in .env
-# (for example to claude-sonnet-5-5) if you want cheaper test runs.
+# Which Claude model each agent uses. Change them in .env without touching code.
+# The planner uses Sonnet because picking stops and writing short prompts is a
+# simple task, and Sonnet costs half as much as Opus.
+PLANNER_MODEL = os.environ.get("PLANNER_MODEL", "claude-sonnet-5-5")
+# The text agent's model (decided when we build the text agent).
 CLAUDE_MODEL = os.environ.get("CLAUDE_MODEL", "claude-opus-5-5")
 
 # Video agent settings (Google Veo through Vertex AI).
