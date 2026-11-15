@@ -79,44 +79,93 @@ All provider calls use each company's official Python SDK.
 | Person | Builds |
 |---|---|
 | Palden | `config.py`, `models.py`, orchestrator, human review, assembly, mock media, `main.py`, shared tests, planner agent, text agent, repo |
-| Dipesh | Real Veo call in `agents/video_agent.py` |
-| Ankit | Real ElevenLabs call in `agents/audio_agent.py` |
+| Dipesh | The entire video agent, `agents/video_agent.py`, from scratch: mock mode, the loop over stops, the Veo call, file handling, and its tests |
+| Ankit | The entire audio agent, `agents/audio_agent.py`, from scratch: mock mode, the loop over stops, the ElevenLabs call, file handling, and its tests |
 | Everyone | Report and slides (Google Docs; final PDFs go in `docs/`) |
 
 ---
 
 ## For Dipesh and Ankit: how to add your agent
 
-Your agent file already exists and **already works in mock mode**. The loop over
-stops, skipping files that already exist, safe saving, and file naming are all done.
-You only fill in **one function** that makes **one file**.
+**Status: neither agent is implemented.** `agents/video_agent.py` and
+`agents/audio_agent.py` exist but are **empty**. Dipesh and Ankit each write their whole
+agent from scratch: mock mode, the loop over stops, the API call, file handling, error
+handling, and tests. This section is the contract your agent must meet so it plugs into
+the rest of the pipeline.
+
+### How your agent fits into the pipeline
+1. The planner and text agents fill in a `TripPlan` (see `models.py`).
+2. A person approves the plan in the human review step.
+3. The orchestrator calls **your** function once, with the approved plan and the
+   run's output folder.
+4. Your function makes one file per stop and returns the list of file paths.
+5. Assembly finds your files by their standard names (see below) and builds the final videos.
+
+Agents never call each other. You only read from the `TripPlan`; don't change it.
+
+### The function the orchestrator will call (required names and signatures)
 
 | | Dipesh (video) | Ankit (audio) |
 |---|---|---|
 | File | `agents/video_agent.py` | `agents/audio_agent.py` |
-| Function to fill in | `generate_clip(prompt, out_path)` | `generate_narration_audio(text, out_path)` |
-| What it receives | `prompt`: one stop's `video_prompt` (str)<br>`out_path`: where to save (`Path`) | `text`: one stop's `narration`, ≤ ~20 words (str)<br>`out_path`: where to save (`Path`) |
-| What it must do | Save a playable `.mp4` at `out_path` | Save a playable `.mp3` at `out_path` |
-| What it returns | Nothing (`None`) | Nothing (`None`) |
-| On failure | Raise an exception with a clear message | Raise an exception with a clear message |
-| SDK | `google-genai` (Vertex AI mode) | `elevenlabs` |
+| Function | `make_clips(plan: TripPlan, run_dir: Path) -> list[Path]` | `make_voiceovers(plan: TripPlan, run_dir: Path) -> list[Path]` |
+| What it reads from each stop | `stop.video_prompt` | `stop.narration` (≤ ~20 words) |
+| What it makes per stop | One playable, **silent** `.mp4` | One playable `.mp3` |
+| Where each file goes | `config.clip_path(run_dir, n)` → `clips/stop_N.mp4` | `config.audio_path(run_dir, n)` → `audio/stop_N.mp3` |
+| What it returns | The list of clip paths, **in stop order** | The list of mp3 paths, **in stop order** |
+| SDK (real mode) | `google-genai` (Vertex AI mode, not a Gemini API key) | `elevenlabs` |
 | Settings to use | `config.get_google_project()`, `config.GOOGLE_CLOUD_LOCATION`, `config.VEO_MODEL`, `config.VEO_RESOLUTION`, `config.VEO_CLIP_SECONDS` | `config.get_api_key("ELEVENLABS_API_KEY")`; add `ELEVENLABS_VOICE_ID` and `ELEVENLABS_MODEL` to `config.py` and `.env.example` |
 
-The `TODO` comment inside each function lists the suggested steps.
+Stop numbers `n` start at **1** (Stop 1, Stop 2, ...), matching what the reviewer sees.
 
-**Rules:**
-- Don't rename files or change `out_path`. The loop saves to a temporary `.partial`
-  file and renames it only when your function finishes without an error. That's how
-  a crashed run never leaves a half-made file that gets skipped next time.
-- Don't change `make_clips()` / `make_voiceovers()` or the mock-mode code. If you think
-  they need a change, ask Palden.
-- Add your SDK to `requirements.txt`.
+**Suggested (not required) structure:** a small helper that makes *one* file, which
+`make_clips()` / `make_voiceovers()` call in a loop. For example
+`generate_clip(prompt: str, out_path: Path) -> None` or
+`generate_narration_audio(text: str, out_path: Path) -> None`. It saves the file at
+`out_path` and raises an exception if anything fails.
+
+### Mock-mode requirements
+- Check `config.MOCK_MODE` **when your function runs** (write `config.MOCK_MODE`, not
+  `from config import MOCK_MODE`).
+- In mock mode: **no API calls, no API key needed, no cost.**
+- Mock files must still be real, playable media files, because assembly joins them:
+  - **Video:** a silent 1280x720 `.mp4`, `config.VEO_CLIP_SECONDS` long.
+  - **Audio:** an `.mp3` roughly as long as the narration would take to say (about
+    2.5 words per second). That way mock mode also tests assembly's slow-down/freeze logic.
+- `mock_media.py` already has ffmpeg helpers you may use for this:
+  `make_mock_clip(out_path, stop_number, seconds)` and `make_mock_audio(out_path, text)`.
+
+### File-saving requirements
+- **Skip files that already exist.** If `stop_N.mp4` / `stop_N.mp3` is already there
+  from an earlier run, don't make it again (reruns must never pay twice). Still include
+  its path in the returned list.
+- **Never leave a broken file under the final name.** Save to a temporary file first
+  (for example `stop_N.partial.mp4`) and rename it to the final name only after it's
+  completely finished. Otherwise a crash halfway through leaves a half-made file that
+  gets skipped forever on later runs.
+- Use the `config` path helpers. Don't invent your own file names or folders.
+- Print a short progress line per stop, e.g. `[video] Stop 2: making clip for Biloxi, MS...`.
+
+### Error-handling requirements
+- If anything fails (bad key, network error, the API refuses, a timeout), **raise an
+  exception with a clear, plain-English message** saying what went wrong and how to fix it.
+- Don't silently skip a stop, and don't return a path to a file that doesn't exist.
+- **Video only:** Veo jobs are slow ("long-running"). Check on the job every ~10 seconds
+  and give up with a clear error after a few minutes. Ask for no audio if the model has
+  that option. Assembly also removes any audio track as a safety net.
+
+### Other rules
+- Add your SDK to `requirements.txt` with a pinned version.
+- Write tests: `tests/test_video_agent.py` / `tests/test_audio_agent.py`, running in mock
+  mode so they're free. At minimum, check one file per stop, correct names and order,
+  skipping existing files, and no leftover `.partial` files.
 - **Dipesh, first task:** make one real Veo test call and find out whether Vertex AI
   needs a Cloud Storage bucket for the output. If it does, add a `GCS_OUTPUT_BUCKET`
   setting.
 
 **How to test:**
-1. Mock tests (free): `pytest tests/test_video_agent.py` or `pytest tests/test_audio_agent.py` *(coming soon)*
+1. Mock tests (free): `pytest tests/test_video_agent.py` or `pytest tests/test_audio_agent.py`
+   *(once you've written them)*
 2. One real run with a **1-stop trip** to keep the cost low:
    `python main.py "Lake Tahoe"` *(coming soon)*
 3. Open the file in `output/<run>/clips/` or `output/<run>/audio/` and check it plays.
@@ -136,8 +185,8 @@ config.py             settings, .env loading, run folders, file names
 agents/
   planner_agent.py    Claude                                      (coming soon)
   text_agent.py       Claude                                      (coming soon)
-  video_agent.py      Veo: mock mode works, real call TODO (Dipesh)
-  audio_agent.py      ElevenLabs: mock mode works, real call TODO (Ankit)
+  video_agent.py      Veo: NOT IMPLEMENTED, empty file (Dipesh)
+  audio_agent.py      ElevenLabs: NOT IMPLEMENTED, empty file (Ankit)
 tests/                pytest tests, all run in mock mode          (coming soon)
 docs/                 final report and slides PDFs                (at the end)
 output/               one folder per run (not committed)
@@ -222,14 +271,12 @@ pytest
 - [x] Shared data format (`models.py`)
 - [x] Settings and config (`config.py`, `.env.example`)
 - [x] Mock media helpers (`mock_media.py`)
-- [x] Video agent: mock mode (real Veo call: Dipesh)
-- [x] Audio agent: mock mode (real ElevenLabs call: Ankit)
+- [ ] Video agent: not implemented (Dipesh, entire agent including mock mode)
+- [ ] Audio agent: not implemented (Ankit, entire agent including mock mode)
 - [ ] Planner agent
 - [ ] Text agent
 - [ ] Human review
 - [ ] Assembly
 - [ ] `main.py` + orchestrator
 - [ ] Tests
-- [ ] Real Veo call (Dipesh)
-- [ ] Real ElevenLabs call (Ankit)
 - [ ] Report + slides
