@@ -85,7 +85,7 @@ All provider calls use each company's official Python SDK.
 
 ---
 
-## For Dipesh and Ankit: how to add your agent
+## For Dipesh and Anjit: how to add your agent
 
 **Status: neither agent is implemented.** `agents/video_agent.py` and
 `agents/audio_agent.py` exist but are **empty**. Dipesh and Ankit each write their whole
@@ -105,7 +105,7 @@ Agents never call each other. You only read from the `TripPlan`; don't change it
 
 ### The function the orchestrator will call (required names and signatures)
 
-| | Dipesh (video) | Ankit (audio) |
+| | Dipesh (video) | Anjit (audio) |
 |---|---|---|
 | File | `agents/video_agent.py` | `agents/audio_agent.py` |
 | Function | `make_clips(plan: TripPlan, run_dir: Path) -> list[Path]` | `make_voiceovers(plan: TripPlan, run_dir: Path) -> list[Path]` |
