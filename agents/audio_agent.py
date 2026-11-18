@@ -10,7 +10,7 @@ from models import TripPlan
 
 
 def _speech_client():
-    api_key = config.get_api_key("ELEVENLABS_API_KEY")
+    api_key = config.get_api_key("69c3a75d6a7d5aab1ec8bddfeaaa9bf3d49ae563d9d87418c89146e01bf6c1e1")
     try:
         from elevenlabs.client import ElevenLabs
     except ImportError as exc:
