@@ -89,7 +89,8 @@ All provider calls use each company's official Python SDK.
 
 **Status:** the audio agent is implemented with mock generation, an ElevenLabs
 code path, file reuse, temporary-file cleanup, and offline tests. Live ElevenLabs
-generation still needs verification with a replacement API key. The video agent
+generation was verified on November 26, 2026 with a replacement API key: the MP3
+decoded successfully, and Anjit confirmed it sounded good. The video agent
 is still empty. This section is the contract your agent must meet so it plugs into
 the rest of the pipeline.
 
@@ -186,7 +187,7 @@ agents/
   planner_agent.py    Claude                                      (coming soon)
   text_agent.py       Claude                                      (coming soon)
   video_agent.py      Veo: NOT IMPLEMENTED, empty file (Dipesh)
-  audio_agent.py      ElevenLabs + mock audio (Anjit; live API verification pending)
+  audio_agent.py      ElevenLabs + mock audio (Anjit; offline and live audio verified)
 tests/                pytest tests, all run in mock mode          (coming soon)
 docs/                 final report and slides PDFs                (at the end)
 output/               one folder per run (not committed)
@@ -273,7 +274,7 @@ pytest
 - [x] Mock media helpers (`mock_media.py`)
 - [ ] Video agent: not implemented (Dipesh, entire agent including mock mode)
 - [x] Audio agent implementation and offline tests (Anjit)
-- [ ] Live audio verification with a replacement ElevenLabs key
+- [x] Live audio verification with a replacement ElevenLabs key and listening check (November 26, 2026)
 - [ ] Planner agent
 - [ ] Text agent
 - [ ] Human review
@@ -298,5 +299,10 @@ The failure-only tests also run without pytest or ffmpeg:
 python3 -m unittest discover -s tests -p test_audio_failures.py
 ```
 
-Mock audio is a beep, not spoken narration. Live speech must be checked separately
-after revoking the leaked key and saving a replacement in the ignored local `.env`.
+Mock audio is a beep, not spoken narration. On November 26, 2026, all 9 offline
+audio tests passed in a temporary Python 3.9 environment with pytest 8.4.2 and
+ffmpeg. A separate live ElevenLabs request using the replacement key generated
+a valid MP3; decoding succeeded and Anjit confirmed the recording sounded good.
+The project's Python 3.12 dependency environment has not yet been verified.
+Keep API keys in the ignored local `.env` and generated recordings in `output/`;
+neither belongs in a commit.
