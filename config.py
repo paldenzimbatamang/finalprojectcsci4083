@@ -82,6 +82,10 @@ VEO_RESOLUTION = os.environ.get("VEO_RESOLUTION", "720p")
 # Dipesh: check which ones Veo 3.1 Lite allows and update this default if needed.
 VEO_CLIP_SECONDS = int(os.environ.get("VEO_CLIP_SECONDS", "8"))
 
+
+ELEVENLABS_VOICE_ID = os.environ.get("ELEVENLABS_VOICE_ID", "JBFqnCBsd6RMkjVDRZzb")
+ELEVENLABS_MODEL = os.environ.get("ELEVENLABS_MODEL", "eleven_multilingual_v2")
+
 # Narration length cap (team decision): about 20 words is roughly 8 seconds of
 # speech, which matches one 8-second clip. The text agent tells Claude to stay
 # under this. If a narration still runs longer than its clip, assembly slows or

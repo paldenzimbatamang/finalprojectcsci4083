@@ -6,4 +6,4 @@ pytest==9.2.0      # running the tests
 
 # Added later by the agent owners:
 # google-genai     (video agent - Dipesh)
-# elevenlabs       (audio agent - Ankit)
+elevenlabs==2.39.0       (audio agent - Ankit)
