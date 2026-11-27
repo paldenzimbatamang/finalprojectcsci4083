@@ -80,17 +80,17 @@ All provider calls use each company's official Python SDK.
 |---|---|
 | Palden | `config.py`, `models.py`, orchestrator, human review, assembly, mock media, `main.py`, shared tests, planner agent, text agent, repo |
 | Dipesh | The entire video agent, `agents/video_agent.py`, from scratch: mock mode, the loop over stops, the Veo call, file handling, and its tests |
-| Ankit | The entire audio agent, `agents/audio_agent.py`, from scratch: mock mode, the loop over stops, the ElevenLabs call, file handling, and its tests |
+| Anjit | The entire audio agent, `agents/audio_agent.py`, from scratch: mock mode, the loop over stops, the ElevenLabs call, file handling, and its tests |
 | Everyone | Report and slides (Google Docs; final PDFs go in `docs/`) |
 
 ---
 
 ## For Dipesh and Anjit: how to add your agent
 
-**Status: neither agent is implemented.** `agents/video_agent.py` and
-`agents/audio_agent.py` exist but are **empty**. Dipesh and Ankit each write their whole
-agent from scratch: mock mode, the loop over stops, the API call, file handling, error
-handling, and tests. This section is the contract your agent must meet so it plugs into
+**Status:** the audio agent is implemented with mock generation, an ElevenLabs
+code path, file reuse, temporary-file cleanup, and offline tests. Live ElevenLabs
+generation still needs verification with a replacement API key. The video agent
+is still empty. This section is the contract your agent must meet so it plugs into
 the rest of the pipeline.
 
 ### How your agent fits into the pipeline
@@ -186,7 +186,7 @@ agents/
   planner_agent.py    Claude                                      (coming soon)
   text_agent.py       Claude                                      (coming soon)
   video_agent.py      Veo: NOT IMPLEMENTED, empty file (Dipesh)
-  audio_agent.py      ElevenLabs: NOT IMPLEMENTED, empty file (Ankit)
+  audio_agent.py      ElevenLabs + mock audio (Anjit; live API verification pending)
 tests/                pytest tests, all run in mock mode          (coming soon)
 docs/                 final report and slides PDFs                (at the end)
 output/               one folder per run (not committed)
@@ -272,7 +272,8 @@ pytest
 - [x] Settings and config (`config.py`, `.env.example`)
 - [x] Mock media helpers (`mock_media.py`)
 - [ ] Video agent: not implemented (Dipesh, entire agent including mock mode)
-- [ ] Audio agent: not implemented (Ankit, entire agent including mock mode)
+- [x] Audio agent implementation and offline tests (Anjit)
+- [ ] Live audio verification with a replacement ElevenLabs key
 - [ ] Planner agent
 - [ ] Text agent
 - [ ] Human review
@@ -280,3 +281,22 @@ pytest
 - [ ] `main.py` + orchestrator
 - [ ] Tests
 - [ ] Report + slides
+
+### Audio-only verification
+
+With the project virtual environment active and ffmpeg on PATH, run:
+
+```bash
+python -m pytest tests/test_audio_agent.py tests/test_audio_failures.py -q
+```
+
+These tests are offline. They check actual mock MP3 decoding, stop order, reuse,
+missing-key handling, interrupted and empty streams, and temporary-file cleanup.
+The failure-only tests also run without pytest or ffmpeg:
+
+```bash
+python3 -m unittest discover -s tests -p test_audio_failures.py
+```
+
+Mock audio is a beep, not spoken narration. Live speech must be checked separately
+after revoking the leaked key and saving a replacement in the ignored local `.env`.
