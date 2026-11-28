@@ -285,6 +285,26 @@ pytest
 
 ### Audio-only verification
 
+To try the audio agent by itself, install ffmpeg and run from the project root:
+
+```bash
+python3 mock_audio.py
+```
+
+This creates two playable beep MP3s in `output/audio_mock/audio/`. It always
+forces mock mode, even when `.env` has `MOCK_MODE=0`; no API key, ElevenLabs SDK,
+or credits are needed. Beep duration follows the narration's word count.
+On macOS, install ffmpeg with `brew install ffmpeg` if it is missing.
+
+To test your own text, repeat `--narration` for each stop:
+
+```bash
+python3 mock_audio.py --output-dir output/my_audio_test --narration "Welcome to Mobile." --narration "Next stop, Biloxi."
+```
+
+Existing nonempty audio files are reused. Choose a new output directory when
+changing the narration so you generate fresh recordings.
+
 With the project virtual environment active and ffmpeg on PATH, run:
 
 ```bash

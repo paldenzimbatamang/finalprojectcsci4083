@@ -42,3 +42,22 @@ def test_real_mode_reads_key_from_elevenlabs_api_key_setting(monkeypatch):
     monkeypatch.delenv("ELEVENLABS_API_KEY", raising=False)
     with pytest.raises(RuntimeError, match="^ELEVENLABS_API_KEY is not set"):
         audio_agent._speech_client()
+
+
+def test_standalone_mock_forces_offline_mode(tmp_path, monkeypatch):
+    from mock_audio import main
+
+    monkeypatch.setattr(config, "MOCK_MODE", False)
+    monkeypatch.delenv("ELEVENLABS_API_KEY", raising=False)
+
+    def forbidden_client():
+        pytest.fail("Mock runner must never create an API client")
+
+    monkeypatch.setattr(audio_agent, "_speech_client", forbidden_client)
+    assert main(["--output-dir", str(tmp_path), "--narration", "Hello from Mobile."]) == 0
+    path = tmp_path / "audio" / "stop_1.mp3"
+    subprocess.run(
+        ["ffmpeg", "-v", "error", "-i", str(path), "-f", "null", "-"],
+        check=True, capture_output=True,
+    )
+    assert config.MOCK_MODE is False
